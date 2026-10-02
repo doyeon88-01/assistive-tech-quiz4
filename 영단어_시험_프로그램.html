@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>영단어 시험</title>
+<style>
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: Arial, "Noto Sans KR", sans-serif;
+    background: #f6f8fb;
+    color: #222;
+  }
+  .wrap {
+    width: min(900px, 94vw);
+    margin: 35px auto;
+  }
+  .card {
+    background: white;
+    border: 1px solid #dfe4ea;
+    border-radius: 16px;
+    padding: 28px;
+    box-shadow: 0 5px 18px rgba(0,0,0,.05);
+  }
+  h1 {
+    text-align: center;
+    margin: 0 0 24px;
+    font-size: 28px;
+  }
+  .settings {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 14px;
+    margin-bottom: 22px;
+  }
+  .setting {
+    border: 1px solid #dfe4ea;
+    border-radius: 12px;
+    padding: 14px;
+  }
+  .setting-title {
+    font-weight: 700;
+    margin-bottom: 9px;
+  }
+  label {
+    display: block;
+    margin: 7px 0;
+    cursor: pointer;
+  }
+  .question-box {
+    border-top: 1px solid #e5e8ec;
+    padding-top: 25px;
+  }
+  .direction {
+    text-align: center;
+    color: #6d7680;
+    font-size: 14px;
+    margin-bottom: 12px;
+  }
+  .question {
+    width: 100%;
+    min-height: 130px;
+    padding: 24px 18px;
+    border: 1px solid #d7dde4;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    overflow-wrap: anywhere;
+    word-break: keep-all;
+    white-space: normal;
+    font-size: clamp(24px, 5vw, 42px);
+    font-weight: 700;
+    line-height: 1.3;
+    margin-bottom: 18px;
+  }
+  .choices {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  button {
+    border: 1px solid #cfd6de;
+    background: white;
+    border-radius: 10px;
+    padding: 13px 15px;
+    font-size: 16px;
+    cursor: pointer;
+    transition: .15s;
+  }
+  button:hover { background: #f1f4f7; }
+  button:disabled { cursor: default; }
+  .choice.correct { background: #e9f7ee; border-color: #57ad76; }
+  .choice.wrong { background: #fff0f0; border-color: #d66a6a; }
+  .answer-area {
+    display: none;
+    gap: 10px;
+  }
+  .answer-area input {
+    flex: 1;
+    min-width: 0;
+    padding: 13px;
+    border: 1px solid #cfd6de;
+    border-radius: 10px;
+    font-size: 16px;
+  }
+  .controls {
+    display: flex;
+    gap: 10px;
+    margin-top: 18px;
+  }
+  .controls button {
+    flex: 1;
+  }
+  .primary {
+    background: #222;
+    color: white;
+    border-color: #222;
+  }
+  .primary:hover { background: #111; }
+  .result {
+    min-height: 25px;
+    text-align: center;
+    margin-top: 14px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+  }
+  .progress {
+    text-align: center;
+    color: #707983;
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+  @media (max-width: 650px) {
+    .settings, .choices { grid-template-columns: 1fr; }
+    .card { padding: 18px; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>영단어 시험</h1>
+
+    <div class="settings">
+      <div class="setting">
+        <div class="setting-title">문제 방향</div>
+        <label><input type="radio" name="direction" value="en-ko" checked> 영어 → 한국어</label>
+        <label><input type="radio" name="direction" value="ko-en"> 한국어 → 영어</label>
+      </div>
+      <div class="setting">
+        <div class="setting-title">문제 유형</div>
+        <label><input type="radio" name="mode" value="mc" checked> 객관식</label>
+        <label><input type="radio" name="mode" value="short"> 주관식</label>
+        <label><input type="radio" name="mode" value="mixed"> 혼합</label>
+      </div>
+    </div>
+
+    <div class="question-box">
+      <div class="progress" id="progress">1 / 23</div>
+      <div class="direction" id="directionText">영어 → 한국어</div>
+      <div class="question" id="question"></div>
+
+      <div class="choices" id="choices"></div>
+
+      <div class="answer-area" id="answerArea">
+        <input id="answerInput" type="text" placeholder="정답을 입력하세요">
+        <button class="primary" id="submitBtn">확인</button>
+      </div>
+
+      <div class="result" id="result"></div>
+
+      <div class="controls">
+        <button id="nextBtn" class="primary" style="display:none;">다음 문제</button>
+        <button id="restartBtn">처음부터 다시</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+const words = [
+  ["Alignment", "자세정렬"],
+  ["Brachial plexus", "위팔신경얼기"],
+  ["Contracture", "구축"],
+  ["Dislocation", "탈구"],
+  ["Elevation", "어깨올림"],
+  ["Flaccid Hemiplegia", "이완성 편마비"],
+  ["Flaccid stage", "이완기"],
+  ["Forearm", "아래팔"],
+  ["Functional Position", "기능적 위치"],
+  ["Glenoid fossa", "관절오목"],
+  ["Humeral head", "위팔뼈 머리"],
+  ["Immobilization", "고정"],
+  ["Joint Compression", "관절압박"],
+  ["Kyphosis", "척추후만증"],
+  ["Padding", "패딩"],
+  ["Proprioception", "고유수용감각"],
+  ["Retraction", "뒤당김"],
+  ["Round shoulder", "라운드 숄더"],
+  ["Scapula", "어깨뼈"],
+  ["Shortening", "단축"],
+  ["Subluxation", "아탈구"],
+  ["Stroke", "뇌졸중"],
+  ["Ulnar nerve", "자신경"]
+];
+
+const quizWords = words;
+
+let order = [];
+let current = 0;
+let answered = false;
+let score = 0;
+let currentMode = "mc";
+
+const questionEl = document.getElementById("question");
+const choicesEl = document.getElementById("choices");
+const answerArea = document.getElementById("answerArea");
+const answerInput = document.getElementById("answerInput");
+const resultEl = document.getElementById("result");
+const nextBtn = document.getElementById("nextBtn");
+const progressEl = document.getElementById("progress");
+const directionText = document.getElementById("directionText");
+
+function shuffle(arr) {
+  return [...arr].sort(() => Math.random() - 0.5);
+}
+
+function getDirection() {
+  return document.querySelector('input[name="direction"]:checked').value;
+}
+
+function getMode() {
+  return document.querySelector('input[name="mode"]:checked').value;
+}
+
+function normalize(text) {
+  return text.trim().toLowerCase().replace(/\s+/g, " ");
+}
+
+function startQuiz() {
+  order = shuffle([...Array(quizWords.length).keys()]);
+  current = 0;
+  score = 0;
+  answered = false;
+  loadQuestion();
+}
+
+function loadQuestion() {
+  answered = false;
+  resultEl.textContent = "";
+  nextBtn.style.display = "none";
+  answerInput.value = "";
+
+  const direction = getDirection();
+  currentMode = getMode();
+
+  const idx = order[current];
+  const [en, ko] = quizWords[idx];
+  const question = direction === "en-ko" ? en : ko;
+
+  questionEl.textContent = question;
+  directionText.textContent = direction === "en-ko" ? "영어 → 한국어" : "한국어 → 영어";
+  progressEl.textContent = `${current + 1} / ${quizWords.length}`;
+
+  let actualMode = currentMode;
+  if (currentMode === "mixed") {
+    actualMode = Math.random() < 0.5 ? "mc" : "short";
+  }
+
+  if (actualMode === "mc") {
+    answerArea.style.display = "none";
+    choicesEl.style.display = "grid";
+    makeChoices(idx, direction);
+  } else {
+    choicesEl.style.display = "none";
+    answerArea.style.display = "flex";
+    answerInput.focus();
+  }
+}
+
+function makeChoices(correctIndex, direction) {
+  const correctAnswer = direction === "en-ko" ? quizWords[correctIndex][1] : quizWords[correctIndex][0];
+  const pool = quizWords
+    .map((w, i) => i)
+    .filter(i => i !== correctIndex);
+
+  const wrongIndices = shuffle(pool).slice(0, 3);
+  const options = shuffle([correctIndex, ...wrongIndices]);
+
+  choicesEl.innerHTML = "";
+  options.forEach(i => {
+    const btn = document.createElement("button");
+    btn.className = "choice";
+    btn.textContent = direction === "en-ko" ? quizWords[i][1] : quizWords[i][0];
+    btn.onclick = () => checkAnswer(btn, btn.textContent, correctAnswer);
+    choicesEl.appendChild(btn);
+  });
+}
+
+function checkAnswer(button, selected, correct) {
+  if (answered) return;
+  answered = true;
+
+  const isCorrect = normalize(selected) === normalize(correct);
+
+  if (isCorrect) {
+    score++;
+    button.classList.add("correct");
+    resultEl.textContent = "정답입니다! ✓";
+  } else {
+    button.classList.add("wrong");
+    resultEl.textContent = `오답! 정답: ${correct}`;
+    [...choicesEl.children].forEach(btn => {
+      if (normalize(btn.textContent) === normalize(correct)) btn.classList.add("correct");
+    });
+  }
+  nextBtn.style.display = "block";
+}
+
+function submitShortAnswer() {
+  if (answered) return;
+  const direction = getDirection();
+  const idx = order[current];
+  const correct = direction === "en-ko" ? quizWords[idx][1] : quizWords[idx][0];
+  const user = answerInput.value;
+
+  if (!user.trim()) return;
+
+  answered = true;
+  if (normalize(user) === normalize(correct)) {
+    score++;
+    resultEl.textContent = "정답입니다! ✓";
+  } else {
+    resultEl.textContent = `오답! 정답: ${correct}`;
+  }
+  nextBtn.style.display = "block";
+}
+
+document.getElementById("submitBtn").addEventListener("click", submitShortAnswer);
+answerInput.addEventListener("keydown", e => {
+  if (e.key === "Enter") submitShortAnswer();
+});
+
+nextBtn.addEventListener("click", () => {
+  if (current < quizWords.length - 1) {
+    current++;
+    loadQuestion();
+  } else {
+    questionEl.textContent = `시험 완료!`;
+    choicesEl.style.display = "none";
+    answerArea.style.display = "none";
+    directionText.textContent = "";
+    progressEl.textContent = `점수: ${score} / ${quizWords.length}`;
+    resultEl.textContent = "처음부터 다시 버튼을 눌러 새로 풀 수 있습니다.";
+    nextBtn.style.display = "none";
+  }
+});
+
+document.getElementById("restartBtn").addEventListener("click", startQuiz);
+
+document.querySelectorAll('input[name="direction"], input[name="mode"]').forEach(el => {
+  el.addEventListener("change", startQuiz);
+});
+
+startQuiz();
+</script>
+</body>
+</html>
